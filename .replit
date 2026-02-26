@@ -6,4 +6,4 @@ channel = "stable-23_11"
 
 [[ports]]
 localPort = 8501
-externalPort = 8501
+externalPort = 80

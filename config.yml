@@ -1,0 +1,28 @@
+# CTA stations and stops to track.
+# Find train station IDs: https://www.transitchicago.com/developers/ttdocs/
+# Find bus stop IDs from the CTA Bus Tracker API or Google Maps.
+
+train_stations:
+  - id: 40380   # Belmont (Red/Brown/Purple)
+  - id: 40360   # Fullerton (Red/Brown/Purple)
+  - id: 40830   # Diversey (Brown/Purple)
+  - id: 41220   # Addison (Red)
+
+# Only fetch arrivals for these routes at the stations above.
+# Valid values: Red, Blue, Brn, G, Org, P, Pink, Y
+train_routes:
+  - Red
+  - Brn
+  - P
+
+bus_stops:
+  # Add your nearby bus stop IDs here.
+  # Example: stops along Clark St or Ashland Ave
+  - id: 1909
+  - id: 6141
+
+# How often to poll the APIs (in seconds). Min 60 on Replit scheduled deployments.
+poll_interval_seconds: 60
+
+# On-time threshold: a train/bus is "on time" if delay is within this many minutes.
+on_time_threshold_minutes: 1

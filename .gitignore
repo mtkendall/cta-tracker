@@ -1,0 +1,27 @@
+# Environment and secrets
+.env
+
+# DuckDB database (may contain personal location data; don't commit)
+data/
+
+# dbt build artifacts
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Streamlit
+.streamlit/secrets.toml
+
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/

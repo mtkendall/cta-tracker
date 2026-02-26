@@ -1,0 +1,51 @@
+version: 2
+
+models:
+  - name: stg_train_arrivals
+    description: >
+      Cleaned train arrival predictions from the CTA Train Tracker API.
+      Excludes schedule-extrapolated and fault-flagged records.
+    columns:
+      - name: run_number
+        description: Unique train run identifier
+        tests:
+          - not_null
+      - name: route
+        description: CTA L route name
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Red', 'Blue', 'Brn', 'G', 'Org', 'P', 'Pink', 'Y']
+      - name: minutes_away
+        description: Minutes until predicted arrival at time of prediction
+        tests:
+          - not_null
+
+  - name: stg_bus_predictions
+    description: Cleaned bus arrival predictions from the CTA Bus Tracker API.
+    columns:
+      - name: route
+        tests:
+          - not_null
+      - name: stop_id
+        tests:
+          - not_null
+
+  - name: on_time_by_route_hour
+    description: >
+      On-time performance aggregated by route, hour of day, and day of week.
+      Primary table for the heatmap dashboard.
+    columns:
+      - name: pct_on_time
+        description: Percentage of arrivals that were not flagged as delayed (0–100)
+        tests:
+          - not_null
+      - name: observation_count
+        description: Number of unique arrival events in this bucket
+        tests:
+          - not_null
+
+  - name: arrival_history
+    description: >
+      Flat fact table of all unique arrival predictions, one row per
+      vehicle+stop+predicted_arrival combination. Used for time-series charts.

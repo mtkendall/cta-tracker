@@ -1,0 +1,13 @@
+# dbt connection profile for DuckDB.
+# This file lives in the dbt/ directory (not ~/.dbt/) so it's portable.
+# Run dbt commands with: dbt run --profiles-dir . (from inside the dbt/ directory)
+# scripts/run_dbt.py handles this automatically.
+
+cta_tracker:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: '../data/cta.duckdb'   # relative to the dbt/ directory
+      extensions:
+        - json

@@ -1,0 +1,9 @@
+modules = ["python-3.11"]
+run = "streamlit run app/streamlit_app.py"
+
+[nix]
+channel = "stable-23_11"
+
+[[ports]]
+localPort = 8501
+externalPort = 8501

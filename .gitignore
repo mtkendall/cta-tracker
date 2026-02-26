@@ -4,6 +4,9 @@
 # DuckDB database (may contain personal location data; don't commit)
 data/
 
+# exports/ contains Parquet files synced to Replit — DO commit these
+# (nothing to ignore here; exports/*.parquet should be tracked)
+
 # dbt build artifacts
 dbt/target/
 dbt/dbt_packages/

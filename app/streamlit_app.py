@@ -3,11 +3,17 @@ CTA Transit Tracker — Streamlit Dashboard
 
 Shows historical on-time performance for tracked CTA train and bus routes.
 
+Two data source modes:
+  - Local (default): reads from data/cta.duckdb (set DB_PATH to override)
+  - Parquet (Replit):  reads from exports/*.parquet committed to git
+    Set DATA_SOURCE=parquet in Replit Secrets to activate this mode.
+
 Run with:
     streamlit run app/streamlit_app.py
 """
 
 import os
+from pathlib import Path
 
 import duckdb
 import pandas as pd
@@ -18,7 +24,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH", "data/cta.duckdb")
-ON_TIME_THRESHOLD = 1  # minutes; used for any threshold-based display
+DATA_SOURCE = os.getenv("DATA_SOURCE", "duckdb")   # "duckdb" or "parquet"
+EXPORTS_DIR = Path("exports")
+
+MART_TABLES = ["on_time_by_route_hour", "arrival_history"]
 
 st.set_page_config(
     page_title="CTA Tracker",
@@ -31,12 +40,28 @@ st.caption("Historical on-time performance for nearby train and bus routes.")
 
 
 @st.cache_resource
-def get_connection():
-    """Shared read-only DuckDB connection (cached for the session)."""
-    return duckdb.connect(DB_PATH, read_only=True)
+def get_connection() -> duckdb.DuckDBPyConnection:
+    """
+    Returns a DuckDB connection.
+
+    In 'duckdb' mode: connects to the local .duckdb file (read-only).
+    In 'parquet' mode: creates an in-memory DB with views over exports/*.parquet,
+      so all downstream SQL queries work identically.
+    """
+    if DATA_SOURCE == "parquet":
+        conn = duckdb.connect()   # in-memory
+        for table in MART_TABLES:
+            parquet_path = EXPORTS_DIR / f"{table}.parquet"
+            if parquet_path.exists():
+                conn.execute(
+                    f"CREATE VIEW {table} AS SELECT * FROM read_parquet('{parquet_path}')"
+                )
+        return conn
+    else:
+        return duckdb.connect(DB_PATH, read_only=True)
 
 
-def has_table(conn, table_name: str) -> bool:
+def has_table(conn: duckdb.DuckDBPyConnection, table_name: str) -> bool:
     result = conn.execute(
         "SELECT count(*) FROM information_schema.tables WHERE table_name = ?",
         [table_name],
@@ -47,19 +72,30 @@ def has_table(conn, table_name: str) -> bool:
 try:
     conn = get_connection()
 except Exception as e:
-    st.error(f"Could not connect to DuckDB at `{DB_PATH}`: {e}")
+    st.error(f"Could not open data source ({DATA_SOURCE}): {e}")
     st.stop()
 
-# Check that dbt models have been run
+# Check that data is available
 if not has_table(conn, "on_time_by_route_hour"):
-    st.warning(
-        "No transformed data found. Run the following to get started:\n\n"
-        "```bash\n"
-        "python scripts/load_gtfs.py       # one-time\n"
-        "python scripts/collect_data.py    # collect some data first\n"
-        "python scripts/run_dbt.py         # build the mart tables\n"
-        "```"
-    )
+    if DATA_SOURCE == "parquet":
+        st.warning(
+            "No exported data found in `exports/`. On your local machine, run:\n\n"
+            "```bash\n"
+            "python scripts/collect_data.py\n"
+            "python scripts/run_dbt.py\n"
+            "python scripts/export_for_replit.py\n"
+            "git add exports/ && git push\n"
+            "```"
+        )
+    else:
+        st.warning(
+            "No transformed data found. Run the following to get started:\n\n"
+            "```bash\n"
+            "python scripts/load_gtfs.py       # one-time\n"
+            "python scripts/collect_data.py    # collect some data first\n"
+            "python scripts/run_dbt.py         # build the mart tables\n"
+            "```"
+        )
     st.stop()
 
 # ── Sidebar filters ──────────────────────────────────────────────────────────

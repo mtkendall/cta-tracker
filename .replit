@@ -3,6 +3,7 @@ run = "streamlit run app/streamlit_app.py"
 
 [nix]
 channel = "stable-23_11"
+packages = ["glibcLocales", "libyaml", "openssl"]
 
 [[ports]]
 localPort = 8501

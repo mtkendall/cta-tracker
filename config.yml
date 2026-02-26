@@ -15,9 +15,29 @@ train_routes:
   - P
 
 bus_stops:
-  - id: 4998    # Belmont & Halsted (eastbound on Belmont)
-  - id: 5966    # Halsted & Belmont (northbound on Halsted)
-  - id: 14906   # Halsted & Belmont (southbound on Halsted)
+  # At the corner (~0.0 mi)
+  - id: 4998    # Belmont & Halsted (eastbound)
+  - id: 5966    # Halsted & Belmont (northbound)
+  - id: 14150   # Belmont & Halsted Terminal
+  - id: 14906   # Halsted & Belmont (southbound)
+  # Belmont & Clark (~0.1 mi west)
+  - id: 14913   # Belmont & Clark (westbound)
+  - id: 14915   # Belmont & Clark (eastbound)
+  # Clark & Belmont (~0.1 mi)
+  - id: 1921    # Clark & Belmont (northbound)
+  - id: 1828    # Clark & Belmont (southbound)
+  # Halsted & Aldine (~0.1 mi north)
+  - id: 5967    # Halsted & Aldine (northbound)
+  - id: 5761    # Halsted & Aldine (southbound)
+  # Belmont & Orchard (~0.15 mi east)
+  - id: 17901   # Belmont & Orchard (eastbound)
+  - id: 4987    # Belmont & Orchard (westbound)
+  # Halsted & Clark/Barry (~0.15 mi south)
+  - id: 14911   # Halsted & Clark/Barry (northbound)
+  - id: 14908   # Halsted & Clark/Barry (southbound)
+  # Clark & Barry/Halsted (~0.1–0.17 mi)
+  - id: 14437   # Clark & Barry/Halsted (northbound)
+  - id: 14895   # Clark & Barry/Halsted (southbound)
 
 # How often to poll the APIs (in seconds). Min 60 on Replit scheduled deployments.
 poll_interval_seconds: 60

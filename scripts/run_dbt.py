@@ -15,8 +15,11 @@ PROJECT_ROOT = Path(__file__).parent.parent
 
 
 def run_dbt(*commands: str):
+    # Resolve the dbt binary from the same directory as the Python executable,
+    # so it works correctly inside a virtualenv without needing activation.
+    dbt_bin = Path(sys.executable).parent / "dbt"
     for cmd in commands:
-        args = ["dbt"] + cmd.split()
+        args = [str(dbt_bin)] + cmd.split()
         print(f"Running: {' '.join(args)}")
         result = subprocess.run(args, cwd=PROJECT_ROOT / "dbt", check=False)
         if result.returncode != 0:

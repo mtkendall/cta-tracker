@@ -3,6 +3,7 @@ version: 2
 sources:
   - name: raw
     description: Raw data collected from CTA APIs and GTFS static data
+    schema: main   # DuckDB default schema where all tables land
     tables:
       - name: raw_train_arrivals
         description: Raw train arrival predictions collected from the CTA Train Tracker API
@@ -48,6 +49,7 @@ sources:
 
   - name: gtfs
     description: Static GTFS schedule data from CTA
+    schema: main
     tables:
       - name: gtfs_stops
       - name: gtfs_routes

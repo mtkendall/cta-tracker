@@ -14,6 +14,7 @@ import argparse
 import os
 import time
 from datetime import datetime
+from typing import Optional
 
 import duckdb
 import requests
@@ -79,14 +80,17 @@ def _ensure_tables(conn: duckdb.DuckDBPyConnection):
     """)
 
 
-def _parse_cta_timestamp(s: str) -> datetime | None:
-    """Parse CTA timestamp format: YYYYMMDD HH:MM:SS"""
+def _parse_cta_timestamp(s: str) -> Optional[datetime]:
+    """Parse CTA timestamp. Train Tracker returns ISO 8601 (2026-02-26T14:43:08),
+    Bus Tracker returns 'YYYYMMDD HH:MM'. Try both."""
     if not s:
         return None
-    try:
-        return datetime.strptime(s, "%Y%m%d %H:%M:%S")
-    except ValueError:
-        return None
+    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y%m%d %H:%M"):
+        try:
+            return datetime.strptime(s, fmt)
+        except ValueError:
+            continue
+    return None
 
 
 def fetch_train_arrivals(conn: duckdb.DuckDBPyConnection, config: dict):

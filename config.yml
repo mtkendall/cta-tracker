@@ -3,10 +3,9 @@
 # Find bus stop IDs from the CTA Bus Tracker API or Google Maps.
 
 train_stations:
-  - id: 40380   # Belmont (Red/Brown/Purple)
-  - id: 40360   # Fullerton (Red/Brown/Purple)
-  - id: 40830   # Diversey (Brown/Purple)
-  - id: 41220   # Addison (Red)
+  - id: 41320   # Belmont (Red/Brown/Purple)
+  - id: 40530   # Diversey (Brown/Purple)
+  - id: 41210   # Wellington (Brown/Purple)
 
 # Only fetch arrivals for these routes at the stations above.
 # Valid values: Red, Blue, Brn, G, Org, P, Pink, Y
@@ -16,10 +15,9 @@ train_routes:
   - P
 
 bus_stops:
-  # Add your nearby bus stop IDs here.
-  # Example: stops along Clark St or Ashland Ave
-  - id: 1909
-  - id: 6141
+  - id: 4998    # Belmont & Halsted (eastbound on Belmont)
+  - id: 5966    # Halsted & Belmont (northbound on Halsted)
+  - id: 14906   # Halsted & Belmont (southbound on Halsted)
 
 # How often to poll the APIs (in seconds). Min 60 on Replit scheduled deployments.
 poll_interval_seconds: 60

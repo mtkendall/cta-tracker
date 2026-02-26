@@ -56,7 +56,7 @@ def load_gtfs():
             conn.execute(f"DROP TABLE IF EXISTS {table_name}")
             conn.execute(f"""
                 CREATE TABLE {table_name} AS
-                SELECT * FROM read_csv_auto('{tmp_path}', header=true)
+                SELECT * FROM read_csv_auto('{tmp_path}', header=true, all_varchar=true)
             """)
             count = conn.execute(f"SELECT count(*) FROM {table_name}").fetchone()[0]
             print(f"    → {count:,} rows loaded")

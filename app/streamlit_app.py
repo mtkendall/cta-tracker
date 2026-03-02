@@ -312,7 +312,7 @@ else:
         st.info("No recent arrivals found for this stop.")
     else:
         st.dataframe(
-            recent_df.drop(columns=["is_delayed"]).rename(columns={
+            recent_df.rename(columns={
                 "collected_at": "Collected at",
                 "route": "Route",
                 "stop_name": "Stop",

@@ -1,0 +1,21 @@
+# fly.toml app configuration file generated for cta-tracker-collector on 2026-03-01T21:08:11-06:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'cta-tracker-collector'
+primary_region = 'ord'
+
+[build]
+
+[env]
+  DB_PATH = '/app/data/cta.duckdb'
+
+[[mounts]]
+  source = 'cta_data'
+  destination = '/app/data'
+
+[[vm]]
+  memory = '256mb'
+  cpu_kind = 'shared'
+  cpus = 1

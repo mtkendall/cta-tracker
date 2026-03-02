@@ -3,6 +3,7 @@
 # Find bus stop IDs from the CTA Bus Tracker API or Google Maps.
 
 train_stations:
+  - id: 41420   # Addison (Red) — Clark & Addison
   - id: 41320   # Belmont (Red/Brown/Purple)
   - id: 40530   # Diversey (Brown/Purple)
   - id: 41210   # Wellington (Brown/Purple)
@@ -15,32 +16,90 @@ train_routes:
   - P
 
 bus_stops:
-  # At the corner (~0.0 mi)
-  - id: 4998    # Belmont & Halsted (eastbound)
-  - id: 5966    # Halsted & Belmont (northbound)
-  - id: 14150   # Belmont & Halsted Terminal
-  - id: 14906   # Halsted & Belmont (southbound)
-  # Belmont & Clark (~0.1 mi west)
-  - id: 14913   # Belmont & Clark (westbound)
-  - id: 14915   # Belmont & Clark (eastbound)
-  # Clark & Belmont (~0.1 mi)
-  - id: 1921    # Clark & Belmont (northbound)
-  - id: 1828    # Clark & Belmont (southbound)
-  # Halsted & Aldine (~0.1 mi north)
-  - id: 5967    # Halsted & Aldine (northbound)
-  - id: 5761    # Halsted & Aldine (southbound)
-  # Belmont & Orchard (~0.15 mi east)
-  - id: 17901   # Belmont & Orchard (eastbound)
-  - id: 4987    # Belmont & Orchard (westbound)
-  # Halsted & Clark/Barry (~0.15 mi south)
-  - id: 14911   # Halsted & Clark/Barry (northbound)
-  - id: 14908   # Halsted & Clark/Barry (southbound)
-  # Clark & Barry/Halsted (~0.1–0.17 mi)
-  - id: 14437   # Clark & Barry/Halsted (northbound)
-  - id: 14895   # Clark & Barry/Halsted (southbound)
+  # All bus stops within 0.5 miles of Buckingham Pl & Halsted
+  # Halsted corridor
+  - id: 5968    # Halsted & Roscoe (0.04 mi)
+  - id: 5760    # Halsted & Roscoe (0.04 mi)
+  - id: 5969    # Halsted & Cornelia (0.09 mi)
+  - id: 5759    # Halsted & Cornelia (0.10 mi)
+  - id: 5761    # Halsted & Aldine (0.15 mi)
+  - id: 5967    # Halsted & Aldine (0.17 mi)
+  - id: 14901   # Halsted & Addison (0.21 mi)
+  - id: 5970    # Halsted & Addison (0.22 mi)
+  - id: 5966    # Halsted & Belmont (0.29 mi)
+  - id: 14906   # Halsted & Belmont (0.30 mi)
+  - id: 17390   # Halsted & Waveland (0.36 mi)
+  - id: 14911   # Halsted & Clark/Barry (0.40 mi)
+  - id: 5756    # Halsted & Waveland/Broadway Terminal (0.40 mi)
+  - id: 14908   # Halsted & Clark/Barry (0.42 mi)
+  # Broadway corridor
+  - id: 5403    # Broadway & Cornelia (0.17 mi)
+  - id: 5362    # Broadway & Cornelia (0.17 mi)
+  - id: 14451   # Broadway & Addison (0.22 mi)
+  - id: 18386   # Broadway & Roscoe (0.22 mi)
+  - id: 12546   # Addison & Broadway (0.23 mi)
+  - id: 5402    # Broadway & Roscoe (0.23 mi)
+  - id: 12551   # Addison & Broadway (0.25 mi)
+  - id: 14452   # Broadway & Addison (0.26 mi)
+  - id: 5405    # Broadway & Waveland (0.35 mi)
+  - id: 5757    # Waveland & Broadway (0.35 mi)
+  - id: 5360    # Broadway & Waveland (0.36 mi)
+  - id: 4996    # Belmont & Broadway (0.36 mi)
+  - id: 14811   # Broadway & Belmont (0.37 mi)
+  - id: 5400    # Broadway & Belmont (0.37 mi)
+  - id: 14914   # Belmont & Broadway (0.38 mi)
+  - id: 5366    # Broadway & Barry (0.48 mi)
+  - id: 5407    # Broadway & Halsted (0.49 mi)
+  - id: 5399    # Broadway & Barry (0.49 mi)
+  # Addison corridor
+  - id: 17298   # Addison & Halsted (0.22 mi)
+  - id: 12552   # Addison & Halsted (0.23 mi)
+  - id: 14904   # Addison & Fremont (0.26 mi)
+  - id: 12553   # Addison & Fremont (0.27 mi)
+  - id: 12547   # Addison & Pine Grove (0.31 mi)
+  - id: 12550   # Addison & Pine Grove (0.32 mi)
+  - id: 12548   # Addison & Lake Shore (0.41 mi)
+  - id: 12549   # Addison & Lake Shore (0.41 mi)
+  - id: 12541   # Addison & Clark (0.43 mi)
+  - id: 12555   # Addison & Clark (0.44 mi)
+  # Clark corridor
+  - id: 1827    # Clark & School/Aldine (0.23 mi)
+  - id: 1922    # Clark & School/Aldine (0.23 mi)
+  - id: 1826    # Clark & Roscoe (0.25 mi)
+  - id: 1924    # Clark & Newport (0.27 mi)
+  - id: 1828    # Clark & Belmont (0.30 mi)
+  - id: 1921    # Clark & Belmont (0.30 mi)
+  - id: 1824    # Clark & Cornelia (0.35 mi)
+  - id: 14437   # Clark & Barry/Halsted (0.38 mi)
+  - id: 1926    # Clark & Addison (0.43 mi)
+  - id: 14895   # Clark & Barry/Halsted (0.45 mi)
+  - id: 1823    # Clark & Addison (0.46 mi)
+  # Belmont corridor
+  - id: 14150   # Belmont & Halsted Terminal (0.27 mi)
+  - id: 4998    # Belmont & Halsted (0.28 mi)
+  - id: 17901   # Belmont & Orchard (0.29 mi)
+  - id: 4987    # Belmont & Orchard (0.30 mi)
+  - id: 14913   # Belmont & Clark (0.30 mi)
+  - id: 14915   # Belmont & Clark (0.30 mi)
+  - id: 4990    # Belmont & Pine Grove (0.45 mi)
+  - id: 4994    # Belmont & Pine Grove (0.45 mi)
+  - id: 18702   # Belmont & Seminary (0.48 mi)
+  - id: 18703   # Belmont & Seminary (0.49 mi)
+  # Lake Shore Drive
+  - id: 1159    # Lake Shore & Stratford (0.38 mi)
+  - id: 1065    # Lake Shore & Cornelia (0.38 mi)
+  - id: 1066    # Lake Shore & Stratford (0.38 mi)
+  - id: 1064    # Lake Shore & Brompton (0.39 mi)
+  - id: 1067    # Lake Shore & Hawthorne (0.39 mi)
+  - id: 1160    # Lake Shore & Cornelia (0.39 mi)
+  - id: 1161    # Lake Shore & Brompton (0.40 mi)
+  - id: 17906   # Lake Shore & Hawthorne (0.40 mi)
+  - id: 1063    # Lake Shore & Addison (0.42 mi)
+  - id: 1157    # Lake Shore & Roscoe (0.43 mi)
+  - id: 1068    # Lake Shore & Roscoe (0.43 mi)
+  - id: 1162    # Lake Shore & Addison (0.43 mi)
+  - id: 1062    # Lake Shore & Waveland (0.48 mi)
+  - id: 1163    # Lake Shore & Waveland (0.49 mi)
 
-# How often to poll the APIs (in seconds). Min 60 on Replit scheduled deployments.
-poll_interval_seconds: 60
-
-# On-time threshold: a train/bus is "on time" if delay is within this many minutes.
-on_time_threshold_minutes: 1
+# How often to poll the APIs (in seconds).
+poll_interval_seconds: 300

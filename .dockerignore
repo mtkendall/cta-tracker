@@ -1,0 +1,12 @@
+.venv/
+data/
+.env
+__pycache__/
+*.pyc
+*.pyo
+dbt/target/
+dbt/logs/
+dbt/dbt_packages/
+.git/
+.DS_Store
+.vscode/

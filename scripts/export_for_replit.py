@@ -24,6 +24,7 @@ EXPORTS_DIR.mkdir(exist_ok=True)
 TABLES = [
     "on_time_by_route_hour",
     "arrival_history",
+    "headway_stats",
 ]
 
 

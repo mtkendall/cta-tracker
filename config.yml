@@ -102,4 +102,4 @@ bus_stops:
   - id: 1163    # Lake Shore & Waveland (0.49 mi)
 
 # How often to poll the APIs (in seconds).
-poll_interval_seconds: 300
+poll_interval_seconds: 600

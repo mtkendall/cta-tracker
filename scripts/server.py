@@ -20,6 +20,7 @@ Optional:
 import logging
 import os
 import shutil
+import signal
 import subprocess
 import sys
 import tempfile
@@ -49,15 +50,27 @@ log = logging.getLogger(__name__)
 
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 
+COLLECT_TIMEOUT_SECONDS = 8 * 60  # must finish well within the 10-min interval
+
+
 def job_collect():
     """Poll CTA APIs and insert raw predictions into DuckDB."""
-    # Import here so module-level env vars are already loaded
-    sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.collect_data import collect_once
+    def _handle_timeout(signum, frame):
+        raise TimeoutError("collect_once timed out")
+
+    signal.signal(signal.SIGALRM, _handle_timeout)
+    signal.alarm(COLLECT_TIMEOUT_SECONDS)
     try:
+        # Import here so module-level env vars are already loaded
+        sys.path.insert(0, str(PROJECT_ROOT))
+        from scripts.collect_data import collect_once
         collect_once()
+    except TimeoutError:
+        log.error("Collection timed out after %ds — skipping", COLLECT_TIMEOUT_SECONDS)
     except Exception as e:
         log.error("Collection failed: %s", e)
+    finally:
+        signal.alarm(0)
 
 
 def job_dbt_and_push():
@@ -138,8 +151,6 @@ if __name__ == "__main__":
     if missing:
         log.warning("Missing env vars: %s — some data sources will be skipped", missing)
 
-    log.info("Starting CTA collector (collect every 60s, export every %dh)", EXPORT_INTERVAL_HOURS)
-
     # Load poll interval from config
     try:
         import yaml
@@ -148,6 +159,8 @@ if __name__ == "__main__":
         poll_interval = cfg.get("poll_interval_seconds", 60)
     except Exception:
         poll_interval = 60
+
+    log.info("Starting CTA collector (collect every %ds, export every %dh)", poll_interval, EXPORT_INTERVAL_HOURS)
 
     scheduler = BlockingScheduler()
 

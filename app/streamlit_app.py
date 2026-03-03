@@ -114,10 +114,12 @@ with st.sidebar:
     ROUTE_LABELS = {"Brn": "Brown", "P": "Purple"}
 
     routes = conn.execute(
-        "SELECT DISTINCT route FROM headway_stats WHERE mode = ? ORDER BY route",
+        "SELECT DISTINCT route FROM headway_stats WHERE mode = ?",
         [selected_mode],
     ).df()["route"].tolist()
-    route_labels = [ROUTE_LABELS.get(r, r) for r in routes]
+    route_pairs = sorted([(r, ROUTE_LABELS.get(r, r)) for r in routes], key=lambda x: x[1])
+    routes = [p[0] for p in route_pairs]
+    route_labels = [p[1] for p in route_pairs]
     selected_route_label = st.selectbox("Route", route_labels, index=0)
     selected_route = routes[route_labels.index(selected_route_label)]
 

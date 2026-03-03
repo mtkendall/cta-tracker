@@ -20,6 +20,7 @@ import logging
 import os
 import subprocess
 import sys
+import threading
 from datetime import datetime
 from pathlib import Path
 
@@ -44,17 +45,20 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
+# Shared lock so collection and dbt never open DuckDB simultaneously
+_db_lock = threading.Lock()
+
 # ── Jobs ──────────────────────────────────────────────────────────────────────
 
 def job_collect():
     """Poll CTA APIs and insert raw predictions into DuckDB."""
-    # Import here so module-level env vars are already loaded
     sys.path.insert(0, str(PROJECT_ROOT))
     from scripts.collect_data import collect_once
-    try:
-        collect_once()
-    except Exception as e:
-        log.error("Collection failed: %s", e)
+    with _db_lock:
+        try:
+            collect_once()
+        except Exception as e:
+            log.error("Collection failed: %s", e)
 
 
 def upload_exports_to_gcs():
@@ -78,28 +82,28 @@ def job_dbt_and_upload():
     """Run dbt, export parquet files, and upload to GCS."""
     log.info("=== Starting dbt + export + upload ===")
 
-    # 1. Run dbt
-    for cmd in ["run", "test"]:
-        log.info("Running: dbt %s", cmd)
-        result = subprocess.run(
-            [str(DBT_BIN), cmd],
-            cwd=PROJECT_ROOT / "dbt",
-        )
-        if result.returncode != 0:
-            log.error("dbt %s failed (exit %d) — skipping export", cmd, result.returncode)
+    # 1. Run dbt and export parquet (hold lock so collector can't write concurrently)
+    with _db_lock:
+        for cmd in ["run", "test"]:
+            log.info("Running: dbt %s", cmd)
+            result = subprocess.run(
+                [str(DBT_BIN), cmd],
+                cwd=PROJECT_ROOT / "dbt",
+            )
+            if result.returncode != 0:
+                log.error("dbt %s failed (exit %d) — skipping export", cmd, result.returncode)
+                return
+
+        log.info("Exporting parquet files")
+        sys.path.insert(0, str(PROJECT_ROOT))
+        from scripts.export_parquet import export
+        try:
+            export()
+        except Exception as e:
+            log.error("Export failed: %s", e)
             return
 
-    # 2. Export parquet files
-    log.info("Exporting parquet files")
-    sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.export_parquet import export
-    try:
-        export()
-    except Exception as e:
-        log.error("Export failed: %s", e)
-        return
-
-    # 3. Upload to GCS
+    # 2. Upload to GCS (no DuckDB access, lock not needed)
     try:
         upload_exports_to_gcs()
     except Exception as e:

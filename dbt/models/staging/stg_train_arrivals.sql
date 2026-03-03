@@ -37,13 +37,13 @@ cleaned as (
         -- Minutes from when prediction was made until predicted arrival
         datediff('minute', prediction_made_at, predicted_arrival) as minutes_away,
 
-        -- Time dimensions for aggregation
-        date_trunc('hour', prediction_made_at)  as prediction_hour,
-        dayofweek(prediction_made_at)           as day_of_week,   -- 0=Sun, 6=Sat
-        hour(prediction_made_at)                as hour_of_day,
+        -- Time dimensions for aggregation (based on predicted arrival time)
+        date_trunc('hour', predicted_arrival)   as prediction_hour,
+        dayofweek(predicted_arrival)            as day_of_week,   -- 0=Sun, 6=Sat
+        hour(predicted_arrival)                 as hour_of_day,
 
         -- Friendly day name
-        case dayofweek(prediction_made_at)
+        case dayofweek(predicted_arrival)
             when 0 then 'Sunday'
             when 1 then 'Monday'
             when 2 then 'Tuesday'

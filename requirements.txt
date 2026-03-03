@@ -7,3 +7,4 @@ apscheduler>=3.10
 pandas>=2.1
 plotly>=5.0
 python-dotenv>=1.0
+google-cloud-storage>=2.0

@@ -1,28 +1,25 @@
 """
-Fly.io background worker for CTA data collection and export.
+Background worker for CTA data collection and export.
 
 Two scheduled jobs:
-  - collect:      every 60s  — polls CTA Train/Bus Tracker APIs → DuckDB
-  - dbt_and_push: every 2h   — runs dbt, exports parquet, pushes to GitHub
+  - collect:          every 60s  — polls CTA Train/Bus Tracker APIs → DuckDB
+  - dbt_and_upload:   every 2h   — runs dbt, exports parquet, uploads to GCS
 
-Required environment variables (set as Fly secrets):
+Required environment variables:
   CTA_TRAIN_KEY   Train Tracker API key
   CTA_BUS_KEY     Bus Tracker API key
-  GH_TOKEN        GitHub PAT with Contents: Read+Write on this repo
+  GCS_BUCKET      GCS bucket name (e.g. cta-tracker-data)
 
 Optional:
-  DB_PATH         Path to DuckDB file (default: data/cta.duckdb)
-  GH_REPO         GitHub repo slug (default: mtkendall/cta-tracker)
-  GH_BRANCH       Branch to push to (default: main)
+  DB_PATH                Path to DuckDB file (default: data/cta.duckdb)
   EXPORT_INTERVAL_HOURS  Hours between dbt+export runs (default: 2)
+  GCS_EXPORTS_PREFIX     GCS path prefix for parquet files (default: exports)
 """
 
 import logging
 import os
-import shutil
 import subprocess
 import sys
-import tempfile
 from datetime import datetime
 from pathlib import Path
 
@@ -35,8 +32,8 @@ load_dotenv()
 # ── Config ────────────────────────────────────────────────────────────────────
 
 PROJECT_ROOT = Path(__file__).parent.parent
-GH_REPO = os.getenv("GH_REPO", "mtkendall/cta-tracker")
-GH_BRANCH = os.getenv("GH_BRANCH", "main")
+GCS_BUCKET = os.getenv("GCS_BUCKET")
+GCS_EXPORTS_PREFIX = os.getenv("GCS_EXPORTS_PREFIX", "exports")
 EXPORT_INTERVAL_HOURS = int(os.getenv("EXPORT_INTERVAL_HOURS", "2"))
 DBT_BIN = Path(sys.executable).parent / "dbt"
 
@@ -60,9 +57,26 @@ def job_collect():
         log.error("Collection failed: %s", e)
 
 
-def job_dbt_and_push():
-    """Run dbt, export parquet files, and push to GitHub."""
-    log.info("=== Starting dbt + export + push ===")
+def upload_exports_to_gcs():
+    """Upload exports/*.parquet to GCS_BUCKET/GCS_EXPORTS_PREFIX/."""
+    if not GCS_BUCKET:
+        log.warning("GCS_BUCKET not set — skipping upload")
+        return
+
+    from google.cloud import storage
+    client = storage.Client()
+    bucket = client.bucket(GCS_BUCKET)
+    exports_dir = PROJECT_ROOT / "exports"
+
+    for parquet_file in exports_dir.glob("*.parquet"):
+        blob_name = f"{GCS_EXPORTS_PREFIX}/{parquet_file.name}"
+        bucket.blob(blob_name).upload_from_filename(str(parquet_file))
+        log.info("Uploaded %s → gs://%s/%s", parquet_file.name, GCS_BUCKET, blob_name)
+
+
+def job_dbt_and_upload():
+    """Run dbt, export parquet files, and upload to GCS."""
+    log.info("=== Starting dbt + export + upload ===")
 
     # 1. Run dbt
     for cmd in ["run", "test"]:
@@ -75,7 +89,7 @@ def job_dbt_and_push():
             log.error("dbt %s failed (exit %d) — skipping export", cmd, result.returncode)
             return
 
-    # 2. Export parquet files (reuse export_for_replit logic)
+    # 2. Export parquet files
     log.info("Exporting parquet files")
     sys.path.insert(0, str(PROJECT_ROOT))
     from scripts.export_for_replit import export
@@ -85,49 +99,11 @@ def job_dbt_and_push():
         log.error("Export failed: %s", e)
         return
 
-    # 3. Push exports/ to GitHub via shallow clone
-    token = os.environ.get("GH_TOKEN")
-    if not token:
-        log.warning("GH_TOKEN not set — skipping git push")
-        return
-
-    remote = f"https://x-access-token:{token}@github.com/{GH_REPO}.git"
-    exports_src = PROJECT_ROOT / "exports"
-
-    log.info("Pushing exports to GitHub (%s)", GH_REPO)
+    # 3. Upload to GCS
     try:
-        with tempfile.TemporaryDirectory() as tmp:
-            tmp_path = Path(tmp)
-
-            subprocess.run(
-                ["git", "clone", "--depth=1", remote, tmp],
-                check=True, capture_output=True,
-            )
-
-            # Copy parquet files into the clone
-            for f in exports_src.glob("*.parquet"):
-                shutil.copy(f, tmp_path / "exports" / f.name)
-
-            subprocess.run(["git", "-C", tmp, "config", "user.email", "collector@fly.io"], check=True)
-            subprocess.run(["git", "-C", tmp, "config", "user.name", "CTA Collector"], check=True)
-            subprocess.run(["git", "-C", tmp, "add", "exports/"], check=True)
-
-            result = subprocess.run(
-                ["git", "-C", tmp, "commit", "-m",
-                 f"Update data export [{datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC]"],
-            )
-
-            if result.returncode == 0:
-                subprocess.run(
-                    ["git", "-C", tmp, "push", remote, GH_BRANCH],
-                    check=True, capture_output=True,
-                )
-                log.info("Pushed exports to GitHub successfully")
-            else:
-                log.info("No changes in exports — nothing to push")
-
-    except subprocess.CalledProcessError as e:
-        log.error("Git push failed: %s", e)
+        upload_exports_to_gcs()
+    except Exception as e:
+        log.error("GCS upload failed: %s", e)
 
 
 # ── Main ─────────────────────────────────────────────────────────────────────
@@ -147,6 +123,9 @@ if __name__ == "__main__":
     except Exception:
         poll_interval = 60
 
+    if not GCS_BUCKET:
+        log.warning("GCS_BUCKET not set — exports will not be uploaded")
+
     log.info("Starting CTA collector (collect every %ds, export every %dh)", poll_interval, EXPORT_INTERVAL_HOURS)
 
     scheduler = BlockingScheduler()
@@ -159,9 +138,9 @@ if __name__ == "__main__":
     )
 
     scheduler.add_job(
-        job_dbt_and_push,
+        job_dbt_and_upload,
         IntervalTrigger(hours=EXPORT_INTERVAL_HOURS),
-        id="dbt_and_push",
+        id="dbt_and_upload",
         next_run_time=datetime.now(),   # run immediately on startup
     )
 

@@ -4,16 +4,19 @@ CTA Transit Tracker — Streamlit Dashboard
 Shows headway analysis (time between consecutive vehicle arrivals) for tracked
 CTA train and bus routes, broken out by time of day and day of week.
 
-Two data source modes:
-  - Local (default): reads from data/cta.duckdb (set DB_PATH to override)
-  - Parquet (cloud):  reads from exports/*.parquet committed to git
-    Set DATA_SOURCE=parquet in Streamlit secrets to activate this mode.
+Three data source modes (set DATA_SOURCE in env or Streamlit secrets):
+  - duckdb  (default): reads from data/cta.duckdb (set DB_PATH to override)
+  - parquet (legacy):  reads from exports/*.parquet committed to git
+  - gcs:               downloads exports/*.parquet from a GCS bucket
+    Requires: GCS_BUCKET, and either ADC or GCS_CREDENTIALS_JSON secret
 
 Run with:
     streamlit run app/streamlit_app.py
 """
 
+import json
 import os
+import tempfile
 from datetime import date, timedelta
 from pathlib import Path
 
@@ -26,7 +29,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DB_PATH = os.getenv("DB_PATH", "data/cta.duckdb")
-DATA_SOURCE = os.getenv("DATA_SOURCE", "duckdb")   # "duckdb" or "parquet"
+DATA_SOURCE = os.getenv("DATA_SOURCE", "duckdb")   # "duckdb", "parquet", or "gcs"
+GCS_BUCKET = os.getenv("GCS_BUCKET")
+GCS_EXPORTS_PREFIX = os.getenv("GCS_EXPORTS_PREFIX", "exports")
 EXPORTS_DIR = Path("exports")
 
 MART_TABLES = ["on_time_by_route_hour", "headway_stats"]
@@ -47,9 +52,33 @@ def get_connection() -> duckdb.DuckDBPyConnection:
     Returns a DuckDB connection.
 
     In 'duckdb' mode: connects to the local .duckdb file (read-only).
-    In 'parquet' mode: creates an in-memory DB with views over exports/*.parquet,
-      so all downstream SQL queries work identically.
+    In 'parquet' mode: creates an in-memory DB with views over exports/*.parquet.
+    In 'gcs' mode: downloads exports from GCS into a temp dir, same as parquet mode.
+
+    All modes expose identical table names so downstream SQL is unchanged.
     """
+    if DATA_SOURCE == "gcs":
+        from google.cloud import storage
+        from google.oauth2 import service_account
+
+        creds_json = os.getenv("GCS_CREDENTIALS_JSON")
+        if creds_json:
+            creds = service_account.Credentials.from_service_account_info(
+                json.loads(creds_json)
+            )
+            client = storage.Client(credentials=creds)
+        else:
+            client = storage.Client()   # uses ADC (e.g. VM service account)
+
+        bucket = client.bucket(GCS_BUCKET)
+        tmp_dir = Path(tempfile.mkdtemp())
+        conn = duckdb.connect()
+        for table in MART_TABLES:
+            local_path = tmp_dir / f"{table}.parquet"
+            bucket.blob(f"{GCS_EXPORTS_PREFIX}/{table}.parquet").download_to_filename(str(local_path))
+            conn.execute(f"CREATE VIEW {table} AS SELECT * FROM read_parquet('{local_path}')")
+        return conn
+
     if DATA_SOURCE == "parquet":
         conn = duckdb.connect()   # in-memory
         for table in MART_TABLES:
@@ -59,8 +88,8 @@ def get_connection() -> duckdb.DuckDBPyConnection:
                     f"CREATE VIEW {table} AS SELECT * FROM read_parquet('{parquet_path}')"
                 )
         return conn
-    else:
-        return duckdb.connect(DB_PATH, read_only=True)
+
+    return duckdb.connect(DB_PATH, read_only=True)
 
 
 def has_table(conn: duckdb.DuckDBPyConnection, table_name: str) -> bool:
@@ -79,7 +108,12 @@ except Exception as e:
 
 # Check that headway data is available
 if not has_table(conn, "headway_stats"):
-    if DATA_SOURCE == "parquet":
+    if DATA_SOURCE == "gcs":
+        st.warning(
+            f"No exported data found in `gs://{GCS_BUCKET}/{GCS_EXPORTS_PREFIX}/`. "
+            "Ensure the collector VM has run at least one dbt+export cycle."
+        )
+    elif DATA_SOURCE == "parquet":
         st.warning(
             "No exported data found in `exports/`. On your local machine, run:\n\n"
             "```bash\n"

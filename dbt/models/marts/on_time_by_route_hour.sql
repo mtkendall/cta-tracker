@@ -5,13 +5,13 @@ This is the primary table powering the heatmap in the Streamlit dashboard.
 "On time" = CTA did not flag the vehicle as delayed.
 
 Since we're polling predictions every minute, a single train trip generates
-many rows. We deduplicate by taking one reading per (run_number, predicted_arrival)
-pair — the most recent prediction we captured for that specific arrival.
+many rows. We deduplicate by taking one reading per (run_number, stop_id)
+pair — the most recent prediction we captured for that train's visit to that stop.
 */
 
 with train_deduped as (
-    -- One row per unique (run, arrival). Use the latest prediction we saw.
-    select distinct on (run_number, predicted_arrival)
+    -- One row per unique (run, stop). Use the latest prediction we saw.
+    select distinct on (run_number, stop_id, predicted_arrival::date)
         route,
         stop_id,
         station_name,
@@ -22,7 +22,7 @@ with train_deduped as (
         day_name,
         'train' as mode
     from {{ ref('stg_train_arrivals') }}
-    order by run_number, predicted_arrival, collected_at desc
+    order by run_number, stop_id, predicted_arrival::date, collected_at desc
 ),
 
 bus_deduped as (

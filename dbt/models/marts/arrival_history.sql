@@ -7,7 +7,7 @@ chart and the raw history table in the dashboard.
 */
 
 with train as (
-    select distinct on (run_number, predicted_arrival)
+    select distinct on (run_number, stop_id, predicted_arrival::date)
         'train'         as mode,
         route,
         station_name    as stop_name,
@@ -22,7 +22,7 @@ with train as (
         day_name,
         minutes_away
     from {{ ref('stg_train_arrivals') }}
-    order by run_number, predicted_arrival, collected_at desc
+    order by run_number, stop_id, predicted_arrival::date, collected_at desc
 ),
 
 bus as (

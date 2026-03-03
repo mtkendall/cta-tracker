@@ -235,6 +235,7 @@ else:
         heatmap_df
         .pivot(index="day_name", columns="hour_of_day", values=metric_field)
         .reindex([d for d in day_order if d in heatmap_df["day_name"].values])
+        .reindex(columns=range(24))
     )
 
     data_max = heatmap_df[metric_field].max()

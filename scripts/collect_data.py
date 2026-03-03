@@ -11,6 +11,7 @@ On Replit, use Scheduled Deployments to call this script every 1 minute instead.
 """
 
 import argparse
+import fcntl
 import os
 import time
 from datetime import datetime
@@ -246,6 +247,15 @@ if __name__ == "__main__":
         help="Run continuously on the interval set in config.yml",
     )
     args = parser.parse_args()
+
+    # Prevent concurrent runs (e.g. if launchd fires while a previous run is still active)
+    lock_path = os.path.join(os.path.dirname(DB_PATH) or ".", ".collect.lock")
+    lock_file = open(lock_path, "w")
+    try:
+        fcntl.flock(lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("Another collection is already running — exiting.")
+        raise SystemExit(0)
 
     if args.loop:
         cfg = load_config()

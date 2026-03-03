@@ -31,7 +31,7 @@ bus as (
         route,
         stop_name,
         stop_id,
-        destination,
+        route_direction as destination,
         predicted_arrival,
         prediction_made_at,
         collected_at,

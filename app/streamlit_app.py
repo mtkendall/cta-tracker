@@ -123,7 +123,8 @@ with st.sidebar:
         "SELECT DISTINCT destination FROM headway_stats WHERE mode = ? AND route = ? ORDER BY destination",
         [selected_mode, selected_route],
     ).df()["destination"].tolist()
-    selected_dest = st.selectbox("Destination", destinations, index=0)
+    dest_label = "Direction" if selected_mode == "bus" else "Destination"
+    selected_dest = st.selectbox(dest_label, destinations, index=0)
 
     stop_rows = conn.execute(
         "SELECT DISTINCT stop_id, stop_name FROM headway_stats WHERE mode = ? AND route = ? AND destination = ? ORDER BY stop_name",

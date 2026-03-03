@@ -29,7 +29,7 @@ DB_PATH = os.getenv("DB_PATH", "data/cta.duckdb")
 DATA_SOURCE = os.getenv("DATA_SOURCE", "duckdb")   # "duckdb" or "parquet"
 EXPORTS_DIR = Path("exports")
 
-MART_TABLES = ["on_time_by_route_hour", "arrival_history", "headway_stats"]
+MART_TABLES = ["on_time_by_route_hour", "headway_stats"]
 
 st.set_page_config(
     page_title="CTA Tracker",
@@ -115,21 +115,27 @@ with st.sidebar:
     ).df()["route"].tolist()
     selected_route = st.selectbox("Route", routes, index=0)
 
-    stop_rows = conn.execute(
-        "SELECT DISTINCT stop_id, stop_name FROM headway_stats WHERE mode = ? AND route = ? ORDER BY stop_name",
-        [selected_mode, selected_route],
-    ).df()
-    stop_labels = (stop_rows["stop_name"] + " (" + stop_rows["stop_id"] + ")").tolist()
-    stop_ids = stop_rows["stop_id"].tolist()
-    selected_stop_label = st.selectbox("Stop", stop_labels, index=0)
-    selected_stop_id = stop_ids[stop_labels.index(selected_stop_label)]
-
     destinations = conn.execute(
-        "SELECT DISTINCT destination FROM headway_stats WHERE mode = ? AND route = ? AND stop_id = ? ORDER BY destination",
-        [selected_mode, selected_route, selected_stop_id],
+        "SELECT DISTINCT destination FROM headway_stats WHERE mode = ? AND route = ? ORDER BY destination",
+        [selected_mode, selected_route],
     ).df()["destination"].tolist()
     dest_options = ["All destinations"] + destinations
     selected_dest = st.selectbox("Destination", dest_options, index=0)
+
+    dest_stop_filter = "mode = ? AND route = ?"
+    dest_stop_params = [selected_mode, selected_route]
+    if selected_dest != "All destinations":
+        dest_stop_filter += " AND destination = ?"
+        dest_stop_params.append(selected_dest)
+
+    stop_rows = conn.execute(
+        f"SELECT DISTINCT stop_id, stop_name FROM headway_stats WHERE {dest_stop_filter} ORDER BY stop_name",
+        dest_stop_params,
+    ).df()
+    stop_labels = stop_rows["stop_name"].tolist()
+    stop_ids = stop_rows["stop_id"].tolist()
+    selected_stop_label = st.selectbox("Stop", stop_labels, index=0)
+    selected_stop_id = stop_ids[stop_labels.index(selected_stop_label)]
 
     time_window = st.selectbox(
         "Time window",
@@ -318,41 +324,3 @@ else:
     fig2.update_layout(yaxis_range=[0, None], margin=dict(l=0, r=0, t=10, b=0))
     st.plotly_chart(fig2, use_container_width=True)
 
-st.divider()
-
-# ── Recent arrivals table ──────────────────────────────────────────────────────
-
-st.subheader("Recent arrivals (last 100)")
-
-if not has_table(conn, "arrival_history"):
-    st.info("arrival_history table not available.")
-else:
-    recent_df: pd.DataFrame = conn.execute("""
-        SELECT
-            collected_at,
-            route,
-            stop_name,
-            destination,
-            predicted_arrival,
-            minutes_away
-        FROM arrival_history
-        WHERE mode = ? AND route = ? AND stop_id = ?
-        ORDER BY collected_at DESC
-        LIMIT 100
-    """, base_params).df()
-
-    if recent_df.empty:
-        st.info("No recent arrivals found for this stop.")
-    else:
-        st.dataframe(
-            recent_df.rename(columns={
-                "collected_at": "Collected at",
-                "route": "Route",
-                "stop_name": "Stop",
-                "destination": "Destination",
-                "predicted_arrival": "Predicted arrival",
-                "minutes_away": "Min away",
-            }),
-            use_container_width=True,
-            hide_index=True,
-        )

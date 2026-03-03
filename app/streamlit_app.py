@@ -107,7 +107,9 @@ with st.sidebar:
     modes = conn.execute(
         "SELECT DISTINCT mode FROM headway_stats ORDER BY mode"
     ).df()["mode"].tolist()
-    selected_mode = st.radio("Mode", modes, horizontal=True)
+    mode_labels = [m.title() for m in modes]
+    selected_mode_label = st.radio("Mode", mode_labels, horizontal=True)
+    selected_mode = modes[mode_labels.index(selected_mode_label)]
 
     ROUTE_LABELS = {"Brn": "Brown", "P": "Purple"}
 
@@ -188,7 +190,7 @@ heatmap_df: pd.DataFrame = conn.execute(f"""
 # ── Summary metrics ───────────────────────────────────────────────────────────
 
 stop_name = stop_rows.loc[stop_rows["stop_id"] == selected_stop_id, "stop_name"].iloc[0]
-st.subheader(f"{selected_mode.title()} {selected_route_label} → {selected_dest} — {stop_name}")
+st.subheader(f"{selected_mode_label} {selected_route_label} → {selected_dest} — {stop_name}")
 
 total_obs = int(heatmap_df["observation_count"].sum()) if not heatmap_df.empty else 0
 
@@ -208,8 +210,8 @@ else:
     overall_avg = overall_p90 = overall_max = None
 
 col1, col2, col3, col4 = st.columns(4)
-col1.metric("Avg headway", f"{overall_avg} min" if overall_avg is not None else "—")
-col2.metric("P90 headway", f"{overall_p90} min" if overall_p90 is not None else "—")
+col1.metric("Average headway", f"{overall_avg} min" if overall_avg is not None else "—")
+col2.metric("90th percentile headway", f"{overall_p90} min" if overall_p90 is not None else "—")
 col3.metric("Max headway", f"{overall_max} min" if overall_max is not None else "—")
 col4.metric("Observations", f"{total_obs:,}")
 
@@ -221,12 +223,22 @@ metric_col, _ = st.columns([1, 3])
 with metric_col:
     metric_choice = st.radio(
         "Heatmap metric",
-        ["Avg", "P90", "Max"],
+        ["Average", "90th Percentile", "Max", "Count"],
         horizontal=True,
     )
 
-metric_field = {"Avg": "avg_headway_minutes", "P90": "p90_headway_minutes", "Max": "max_headway_minutes"}[metric_choice]
-st.subheader(f"{metric_choice} headway by hour and day (minutes)")
+metric_field = {
+    "Average": "avg_headway_minutes",
+    "90th Percentile": "p90_headway_minutes",
+    "Max": "max_headway_minutes",
+    "Count": "observation_count",
+}[metric_choice]
+is_count = metric_choice == "Count"
+st.subheader(
+    "Arrival count by hour and day"
+    if is_count
+    else f"{metric_choice} headway by hour and day (minutes)"
+)
 
 if heatmap_df.empty:
     st.info("No headway data yet for this stop. Collect more data and re-run dbt.")
@@ -244,15 +256,15 @@ else:
 
     fig = px.imshow(
         heatmap_pivot,
-        color_continuous_scale="RdYlGn_r",   # reversed: green = short gap = frequent service
+        color_continuous_scale="RdYlGn" if is_count else "RdYlGn_r",
         zmin=0,
         zmax=zmax,
-        labels={"x": "Hour of day", "y": "", "color": f"{metric_choice} headway (min)"},
+        labels={"x": "Hour of day", "y": "", "color": "Arrivals" if is_count else f"{metric_choice} headway (min)"},
         aspect="auto",
         text_auto=True,
     )
     fig.update_layout(
-        coloraxis_colorbar_title="Min",
+        coloraxis_colorbar_title="Count" if is_count else "Min",
         xaxis=dict(
             tickmode="array",
             tickvals=list(range(24)),
@@ -262,6 +274,9 @@ else:
     )
     st.plotly_chart(fig, use_container_width=True)
     st.caption(
+        "Green = more arrivals (better coverage), Red = fewer arrivals. "
+        f"Based on {total_obs:,} headway observations."
+        if is_count else
         "Green = frequent service (short gaps), Red = infrequent service (long gaps). "
         f"Based on {total_obs:,} headway observations."
     )
@@ -270,7 +285,7 @@ st.divider()
 
 # ── Headway trend line chart ──────────────────────────────────────────────────
 
-st.subheader("Daily avg headway over time")
+st.subheader("Daily average headway over time")
 
 DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 DAY_NUMBERS = {label: i for i, label in enumerate(DAY_LABELS)}
@@ -285,12 +300,13 @@ with trend_col1:
 with trend_col2:
     hour_range = st.slider("Hour of day", min_value=0, max_value=23, value=(0, 23))
 with trend_col3:
-    trend_metric = st.radio("Metric", ["Avg", "P90", "Max"], horizontal=True)
+    trend_metric = st.radio("Metric", ["Average", "90th Percentile", "Max", "Count"], horizontal=True)
 
 trend_metric_field = {
-    "Avg": "avg_headway_minutes",
-    "P90": "p90_headway_minutes",
+    "Average": "avg_headway_minutes",
+    "90th Percentile": "p90_headway_minutes",
     "Max": "max_headway_minutes",
+    "Count": "observation_count",
 }[trend_metric]
 
 selected_day_nums = [DAY_NUMBERS[d] for d in selected_days] if selected_days else list(range(7))
@@ -327,7 +343,7 @@ else:
         x="collected_date",
         y=trend_metric_field,
         markers=True,
-        labels={"collected_date": "Date", trend_metric_field: f"{trend_metric} headway (min)"},
+        labels={"collected_date": "Date", trend_metric_field: "Arrivals" if trend_metric == "Count" else f"{trend_metric} headway (min)"},
     )
     fig2.update_layout(yaxis_range=[0, None], margin=dict(l=0, r=0, t=10, b=0))
     st.plotly_chart(fig2, use_container_width=True)

@@ -10,6 +10,7 @@ select
     route,
     stop_id,
     stop_name,
+    destination,
     hour_of_day,
     day_of_week,
     day_name,
@@ -21,4 +22,4 @@ select
     )                                                                      as p90_headway_minutes,
     max(headway_minutes)                                                   as max_headway_minutes
 from {{ ref('headways') }}
-group by mode, route, stop_id, stop_name, hour_of_day, day_of_week, day_name, collected_date
+group by mode, route, stop_id, stop_name, destination, hour_of_day, day_of_week, day_name, collected_date

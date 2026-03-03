@@ -107,7 +107,7 @@ with st.sidebar:
     modes = conn.execute(
         "SELECT DISTINCT mode FROM headway_stats ORDER BY mode"
     ).df()["mode"].tolist()
-    selected_mode = st.selectbox("Mode", modes, index=0)
+    selected_mode = st.radio("Mode", modes, horizontal=True)
 
     routes = conn.execute(
         "SELECT DISTINCT route FROM headway_stats WHERE mode = ? ORDER BY route",
@@ -123,6 +123,13 @@ with st.sidebar:
     stop_ids = stop_rows["stop_id"].tolist()
     selected_stop_label = st.selectbox("Stop", stop_labels, index=0)
     selected_stop_id = stop_ids[stop_labels.index(selected_stop_label)]
+
+    destinations = conn.execute(
+        "SELECT DISTINCT destination FROM headway_stats WHERE mode = ? AND route = ? AND stop_id = ? ORDER BY destination",
+        [selected_mode, selected_route, selected_stop_id],
+    ).df()["destination"].tolist()
+    dest_options = ["All destinations"] + destinations
+    selected_dest = st.selectbox("Destination", dest_options, index=0)
 
     time_window = st.selectbox(
         "Time window",
@@ -149,8 +156,11 @@ elif time_window == "Last 30 days":
 else:
     date_clause = ""
 
-base_filter = f"mode = ? AND route = ? AND stop_id = ? {day_clause} {date_clause}"
+dest_clause = "" if selected_dest == "All destinations" else "AND destination = ?"
+base_filter = f"mode = ? AND route = ? AND stop_id = ? {dest_clause} {day_clause} {date_clause}"
 base_params = [selected_mode, selected_route, selected_stop_id]
+if selected_dest != "All destinations":
+    base_params.append(selected_dest)
 
 # ── Load headway data ─────────────────────────────────────────────────────────
 
@@ -173,18 +183,6 @@ heatmap_df: pd.DataFrame = conn.execute(f"""
     ORDER BY day_of_week, hour_of_day
 """, base_params).df()
 
-trend_df: pd.DataFrame = conn.execute(f"""
-    SELECT
-        collected_date,
-        sum(observation_count)                                              AS observation_count,
-        round(
-            sum(avg_headway_minutes * observation_count) / sum(observation_count), 1
-        )                                                                   AS avg_headway_minutes
-    FROM headway_stats
-    WHERE {base_filter}
-    GROUP BY collected_date
-    ORDER BY collected_date
-""", base_params).df()
 
 # ── Summary metrics ───────────────────────────────────────────────────────────
 
@@ -271,6 +269,41 @@ st.divider()
 # ── Headway trend line chart ──────────────────────────────────────────────────
 
 st.subheader("Daily avg headway over time")
+
+DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+DAY_NUMBERS = {label: i for i, label in enumerate(DAY_LABELS)}
+
+trend_col1, trend_col2 = st.columns(2)
+with trend_col1:
+    selected_days = st.multiselect(
+        "Days of week",
+        options=DAY_LABELS,
+        default=DAY_LABELS,
+    )
+with trend_col2:
+    hour_range = st.slider("Hour of day", min_value=0, max_value=23, value=(0, 23))
+
+selected_day_nums = [DAY_NUMBERS[d] for d in selected_days] if selected_days else list(range(7))
+day_placeholders = ", ".join("?" * len(selected_day_nums))
+trend_filter = (
+    f"{base_filter}"
+    f" AND day_of_week IN ({day_placeholders})"
+    f" AND hour_of_day BETWEEN ? AND ?"
+)
+trend_params = base_params + selected_day_nums + list(hour_range)
+
+trend_df: pd.DataFrame = conn.execute(f"""
+    SELECT
+        collected_date,
+        sum(observation_count)                                              AS observation_count,
+        round(
+            sum(avg_headway_minutes * observation_count) / sum(observation_count), 1
+        )                                                                   AS avg_headway_minutes
+    FROM headway_stats
+    WHERE {trend_filter}
+    GROUP BY collected_date
+    ORDER BY collected_date
+""", trend_params).df()
 
 if trend_df.empty or len(trend_df) < 2:
     st.info("Collect at least 2 days of data to see the trend chart.")

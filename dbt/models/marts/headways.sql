@@ -12,6 +12,7 @@ with ordered as (
         route,
         stop_id,
         stop_name,
+        destination,
         predicted_arrival,
         collected_at,
         date_trunc('day', collected_at)::date as collected_date,
@@ -19,7 +20,7 @@ with ordered as (
         day_of_week,
         day_name,
         lag(predicted_arrival) over (
-            partition by mode, route, stop_id
+            partition by mode, route, stop_id, destination
             order by predicted_arrival
         ) as prev_predicted_arrival
     from {{ ref('arrival_history') }}
@@ -30,6 +31,7 @@ select
     route,
     stop_id,
     stop_name,
+    destination,
     predicted_arrival,
     collected_at,
     collected_date,

@@ -273,7 +273,7 @@ st.subheader("Daily avg headway over time")
 DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 DAY_NUMBERS = {label: i for i, label in enumerate(DAY_LABELS)}
 
-trend_col1, trend_col2 = st.columns(2)
+trend_col1, trend_col2, trend_col3 = st.columns(3)
 with trend_col1:
     selected_days = st.multiselect(
         "Days of week",
@@ -282,6 +282,14 @@ with trend_col1:
     )
 with trend_col2:
     hour_range = st.slider("Hour of day", min_value=0, max_value=23, value=(0, 23))
+with trend_col3:
+    trend_metric = st.radio("Metric", ["Avg", "P90", "Max"], horizontal=True)
+
+trend_metric_field = {
+    "Avg": "avg_headway_minutes",
+    "P90": "p90_headway_minutes",
+    "Max": "max_headway_minutes",
+}[trend_metric]
 
 selected_day_nums = [DAY_NUMBERS[d] for d in selected_days] if selected_days else list(range(7))
 day_placeholders = ", ".join("?" * len(selected_day_nums))
@@ -298,7 +306,11 @@ trend_df: pd.DataFrame = conn.execute(f"""
         sum(observation_count)                                              AS observation_count,
         round(
             sum(avg_headway_minutes * observation_count) / sum(observation_count), 1
-        )                                                                   AS avg_headway_minutes
+        )                                                                   AS avg_headway_minutes,
+        round(
+            sum(p90_headway_minutes * observation_count) / sum(observation_count), 1
+        )                                                                   AS p90_headway_minutes,
+        max(max_headway_minutes)                                            AS max_headway_minutes
     FROM headway_stats
     WHERE {trend_filter}
     GROUP BY collected_date
@@ -311,9 +323,9 @@ else:
     fig2 = px.line(
         trend_df,
         x="collected_date",
-        y="avg_headway_minutes",
+        y=trend_metric_field,
         markers=True,
-        labels={"collected_date": "Date", "avg_headway_minutes": "Avg headway (min)"},
+        labels={"collected_date": "Date", trend_metric_field: f"{trend_metric} headway (min)"},
     )
     fig2.update_layout(yaxis_range=[0, None], margin=dict(l=0, r=0, t=10, b=0))
     st.plotly_chart(fig2, use_container_width=True)

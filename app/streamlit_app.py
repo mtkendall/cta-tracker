@@ -109,28 +109,25 @@ with st.sidebar:
     ).df()["mode"].tolist()
     selected_mode = st.radio("Mode", modes, horizontal=True)
 
+    ROUTE_LABELS = {"Brn": "Brown", "P": "Purple"}
+
     routes = conn.execute(
         "SELECT DISTINCT route FROM headway_stats WHERE mode = ? ORDER BY route",
         [selected_mode],
     ).df()["route"].tolist()
-    selected_route = st.selectbox("Route", routes, index=0)
+    route_labels = [ROUTE_LABELS.get(r, r) for r in routes]
+    selected_route_label = st.selectbox("Route", route_labels, index=0)
+    selected_route = routes[route_labels.index(selected_route_label)]
 
     destinations = conn.execute(
         "SELECT DISTINCT destination FROM headway_stats WHERE mode = ? AND route = ? ORDER BY destination",
         [selected_mode, selected_route],
     ).df()["destination"].tolist()
-    dest_options = ["All destinations"] + destinations
-    selected_dest = st.selectbox("Destination", dest_options, index=0)
-
-    dest_stop_filter = "mode = ? AND route = ?"
-    dest_stop_params = [selected_mode, selected_route]
-    if selected_dest != "All destinations":
-        dest_stop_filter += " AND destination = ?"
-        dest_stop_params.append(selected_dest)
+    selected_dest = st.selectbox("Destination", destinations, index=0)
 
     stop_rows = conn.execute(
-        f"SELECT DISTINCT stop_id, stop_name FROM headway_stats WHERE {dest_stop_filter} ORDER BY stop_name",
-        dest_stop_params,
+        "SELECT DISTINCT stop_id, stop_name FROM headway_stats WHERE mode = ? AND route = ? AND destination = ? ORDER BY stop_name",
+        [selected_mode, selected_route, selected_dest],
     ).df()
     stop_labels = stop_rows["stop_name"].tolist()
     stop_ids = stop_rows["stop_id"].tolist()
@@ -162,11 +159,8 @@ elif time_window == "Last 30 days":
 else:
     date_clause = ""
 
-dest_clause = "" if selected_dest == "All destinations" else "AND destination = ?"
-base_filter = f"mode = ? AND route = ? AND stop_id = ? {dest_clause} {day_clause} {date_clause}"
-base_params = [selected_mode, selected_route, selected_stop_id]
-if selected_dest != "All destinations":
-    base_params.append(selected_dest)
+base_filter = f"mode = ? AND route = ? AND stop_id = ? AND destination = ? {day_clause} {date_clause}"
+base_params = [selected_mode, selected_route, selected_stop_id, selected_dest]
 
 # ── Load headway data ─────────────────────────────────────────────────────────
 
@@ -193,7 +187,7 @@ heatmap_df: pd.DataFrame = conn.execute(f"""
 # ── Summary metrics ───────────────────────────────────────────────────────────
 
 stop_name = stop_rows.loc[stop_rows["stop_id"] == selected_stop_id, "stop_name"].iloc[0]
-st.subheader(f"{selected_mode.title()} {selected_route} — {stop_name}")
+st.subheader(f"{selected_mode.title()} {selected_route_label} → {selected_dest} — {stop_name}")
 
 total_obs = int(heatmap_df["observation_count"].sum()) if not heatmap_df.empty else 0
 

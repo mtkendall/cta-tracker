@@ -119,8 +119,7 @@ if not has_table(conn, "headway_stats"):
             "```bash\n"
             "python scripts/collect_data.py\n"
             "python scripts/run_dbt.py\n"
-            "python scripts/export_for_replit.py\n"
-            "git add exports/ && git push\n"
+            "python scripts/export_parquet.py\n"
             "```"
         )
     else:

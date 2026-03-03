@@ -92,7 +92,7 @@ def job_dbt_and_upload():
     # 2. Export parquet files
     log.info("Exporting parquet files")
     sys.path.insert(0, str(PROJECT_ROOT))
-    from scripts.export_for_replit import export
+    from scripts.export_parquet import export
     try:
         export()
     except Exception as e:

@@ -7,7 +7,7 @@ Run once manually:
 Run continuously (every N seconds, set in config.yml):
     python scripts/collect_data.py --loop
 
-On Replit, use Scheduled Deployments to call this script every 1 minute instead.
+On GCP, server.py runs this automatically via APScheduler — no need to call directly.
 """
 
 import argparse

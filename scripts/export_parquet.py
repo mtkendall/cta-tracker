@@ -1,12 +1,11 @@
 """
 Exports dbt mart tables from local DuckDB to Parquet files in exports/.
-Commit the exports/ directory to git and push — Replit reads from these files.
+Called by server.py before uploading to GCS.
 
 Workflow:
-    python scripts/collect_data.py      # collect some data
-    python scripts/run_dbt.py           # run dbt transforms
-    python scripts/export_for_replit.py # export to Parquet
-    git add exports/ && git push        # sync to Replit
+    python scripts/collect_data.py   # collect some data
+    python scripts/run_dbt.py        # run dbt transforms
+    python scripts/export_parquet.py # export to Parquet (then uploaded to GCS by server.py)
 """
 
 import os
@@ -39,7 +38,7 @@ def export():
         print(f"  {table} → {out_path} ({row_count:,} rows, {size_kb:.1f} KB)")
 
     conn.close()
-    print(f"\nDone. Now run:\n  git add exports/ && git commit -m 'Update data export' && git push")
+    print(f"\nDone. Files exported to {EXPORTS_DIR}/")
 
 
 if __name__ == "__main__":

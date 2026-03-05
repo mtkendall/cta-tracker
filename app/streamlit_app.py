@@ -164,13 +164,13 @@ with st.sidebar:
     selected_dest = st.selectbox(dest_label, destinations, index=0)
 
     stop_rows = conn.execute(
-        "SELECT DISTINCT stop_id, stop_name FROM headway_stats WHERE mode = ? AND route = ? AND destination = ? ORDER BY stop_name",
+        "SELECT stop_name, list(DISTINCT stop_id) AS stop_ids FROM headway_stats WHERE mode = ? AND route = ? AND destination = ? GROUP BY stop_name ORDER BY stop_name",
         [selected_mode, selected_route, selected_dest],
     ).df()
     stop_labels = stop_rows["stop_name"].tolist()
-    stop_ids = stop_rows["stop_id"].tolist()
+    stop_ids_map = dict(zip(stop_rows["stop_name"], stop_rows["stop_ids"]))
     selected_stop_label = st.selectbox("Stop", stop_labels, index=0)
-    selected_stop_id = stop_ids[stop_labels.index(selected_stop_label)]
+    selected_stop_ids = stop_ids_map[selected_stop_label]
 
     time_window = st.selectbox(
         "Time window",
@@ -197,8 +197,9 @@ elif time_window == "Last 30 days":
 else:
     date_clause = ""
 
-base_filter = f"mode = ? AND route = ? AND stop_id = ? AND destination = ? {day_clause} {date_clause}"
-base_params = [selected_mode, selected_route, selected_stop_id, selected_dest]
+stop_placeholders = ", ".join("?" * len(selected_stop_ids))
+base_filter = f"mode = ? AND route = ? AND stop_id IN ({stop_placeholders}) AND destination = ? {day_clause} {date_clause}"
+base_params = [selected_mode, selected_route] + list(selected_stop_ids) + [selected_dest]
 
 # ── Load headway data ─────────────────────────────────────────────────────────
 
@@ -224,7 +225,7 @@ heatmap_df: pd.DataFrame = conn.execute(f"""
 
 # ── Summary metrics ───────────────────────────────────────────────────────────
 
-stop_name = stop_rows.loc[stop_rows["stop_id"] == selected_stop_id, "stop_name"].iloc[0]
+stop_name = selected_stop_label
 st.subheader(f"{selected_mode_label} {selected_route_label} → {selected_dest} — {stop_name}")
 
 total_obs = int(heatmap_df["observation_count"].sum()) if not heatmap_df.empty else 0

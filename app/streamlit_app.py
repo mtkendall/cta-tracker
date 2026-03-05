@@ -287,8 +287,7 @@ else:
         .reindex(columns=range(24))
     )
 
-    data_max = heatmap_df[metric_field].max()
-    zmax = max(round(data_max / 10) * 10, 10)   # round up to nearest 10, minimum 10
+    zmax = 10 if is_count else 30
 
     fig = px.imshow(
         heatmap_pivot,

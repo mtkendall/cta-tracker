@@ -150,7 +150,7 @@ with st.sidebar:
         "SELECT DISTINCT route FROM headway_stats WHERE mode = ?",
         [selected_mode],
     ).df()["route"].tolist()
-    route_pairs = sorted([(r, ROUTE_LABELS.get(r, r)) for r in routes], key=lambda x: x[1])
+    route_pairs = sorted([(r, ROUTE_LABELS.get(r, r)) for r in routes], key=lambda x: (int(x[1]) if x[1].isdigit() else float('inf'), x[1]))
     routes = [p[0] for p in route_pairs]
     route_labels = [p[1] for p in route_pairs]
     selected_route_label = st.selectbox("Route", route_labels, index=0)

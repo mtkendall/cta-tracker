@@ -60,6 +60,8 @@ cleaned as (
       and not is_fault
     -- Sanity check: only keep predictions within 90 minutes
       and minutes_away between 0 and 90
+    -- Purple line is rush-hour only; exclude midnight hour to filter spurious API predictions
+      and not (route = 'P' and hour(predicted_arrival) = 0)
 )
 
 select * from cleaned
